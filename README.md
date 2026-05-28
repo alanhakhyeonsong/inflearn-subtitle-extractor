@@ -8,17 +8,23 @@
 [강의 페이지에서 스크립트 패널 열기]
         │  (페이지가 subtitles/json 요청)
         ▼
-inject.js (MAIN world)   ← fetch/XHR 를 감싸 응답 가로채기
-        │  window.postMessage
+background.js (webRequest.onCompleted)   ← 자막 요청 URL 감지 (타이밍·프레임 무관)
+        │  같은 서명 URL 을 서비스워커가 한 번 더 fetch
         ▼
-content.js (ISOLATED)    ← Markdown 변환 + 화면 우하단 다운로드 버튼 + storage 저장
-        │  chrome.runtime.sendMessage
+JSON 파싱 → Markdown 변환 → chrome.storage 저장
+        │  chrome.tabs.sendMessage
         ▼
-background.js            ← chrome.downloads 로 .md 저장
+content.js   ← 화면 우하단 다운로드 버튼 표시
+        │  버튼 클릭 → chrome.runtime.sendMessage
+        ▼
+background.js   ← chrome.downloads 로 .md 저장
 ```
 
-- 서명 URL(`Policy`/`Signature`)을 직접 다루지 않습니다. 페이지가 정상적으로 받은 응답을 그대로 읽기만 합니다.
+- 페이지의 `fetch`/`XHR` 를 가로채는 대신 **`webRequest` 로 요청 URL 만 감지**하고, 그 서명 URL 을 서비스워커가 다시 받아 본문을 읽습니다. 페이지 로드 시점에 자막이 먼저 떨어져도(예: URL 에 `tab=script` 포함) 놓치지 않습니다.
+- CloudFront 서명 URL 은 만료(`DateLessThan`) 전까지 재사용 가능하고, 정책에 IP 제한이 없어 같은 PC 에서 재요청이 정상 동작합니다.
 - 응답 형태: `[{"start":786,"end":5265,"text":"...","speaker":0}, ...]` (start/end 는 ms).
+
+> 설치 시 "**브라우저 기록 읽기**" 권한 경고가 뜨는데, 이는 `webRequest` 로 인플런 자막 요청을 감지하기 위한 것입니다(`host_permissions` 가 `*.inflearn.com` 으로 한정되어 인플런 외 사이트는 관여하지 않습니다).
 
 ## 설치 (개발자 모드 / 압축 해제된 확장)
 
@@ -33,6 +39,12 @@ background.js            ← chrome.downloads 로 .md 저장
 2. 우측 **스크립트(자막)** 버튼 클릭 → 자막 패널 표시
 3. 화면 우하단에 **`📄 자막 MD 다운로드`** 버튼이 나타남 → 클릭하면 `.md` 저장
 4. 또는 툴바의 확장 아이콘(팝업)에서 캡처 목록 확인 → **MD 다운로드** / **복사**(클립보드)
+
+### 사용 예시
+
+강의 페이지에서 스크립트 패널을 열면 자막이 자동 캡처되고, 확장 팝업에서 강의명·세그먼트 수와 함께 **MD 다운로드** / **복사** 버튼이 나타납니다.
+
+![캡처된 자막 팝업 예시](docs/usage-popup.png)
 
 ### 1차 요약으로 이어가기
 
@@ -74,9 +86,11 @@ ln -s ~/Downloads/inflearn-subtitles ~/tools/inflearn-subtitle-extractor/outputs
 
 ## 트러블슈팅
 
-- **버튼이 안 뜬다 / 팝업이 비어있다**: 스크립트 패널을 열어야 자막 요청이 발생합니다. 이미 캐시된 경우 패널을 닫았다 다시 열거나 새로고침 후 다시 시도.
-- **그래도 안 잡힌다**: 플레이어가 `*.inflearn.com` 이 아닌 별도 도메인 iframe 일 수 있습니다. `chrome://extensions` 에서 서비스워커 콘솔/페이지 콘솔 로그를 확인하고, 해당 도메인을 `manifest.json` 의 `matches` 와 `host_permissions` 에 추가하세요.
-- **변경 후 반영 안 됨**: `chrome://extensions` 에서 이 확장의 새로고침(↻) 버튼을 누르세요.
+- **버튼이 안 뜬다 / 팝업이 비어있다**: 자막 요청이 발생해야 잡힙니다. 강의 페이지를 **새로고침**하거나 스크립트 패널을 닫았다 다시 여세요.
+- **로그 확인**: `chrome://extensions` → 이 확장의 **서비스 워커**(`background.js`) 링크 클릭 → 콘솔에서 `[inflearn-sub]` 로그 확인.
+  - `자막 요청 감지` 가 안 보이면 → 요청 자체를 못 본 것. 자막 호스트가 `*.inflearn.com` 이 아닐 수 있으니 실제 요청 도메인을 확인 후 `manifest.json` 의 `host_permissions` 와 webRequest 필터에 추가.
+  - `자막 요청 감지` 는 보이는데 `캡처 완료` 가 없으면 → 서명 URL 재요청 실패(만료/403). 패널을 다시 열어 새 서명으로 시도.
+- **변경 후 반영 안 됨**: `chrome://extensions` 에서 이 확장의 새로고침(↻) 버튼을 누른 뒤 강의 페이지도 새로고침.
 
 ## 주의
 

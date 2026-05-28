@@ -33,11 +33,7 @@ function render(items) {
     dl.className = "dl";
     dl.textContent = "MD 다운로드";
     dl.onclick = () =>
-      chrome.runtime.sendMessage({
-        action: "download",
-        md: it.md,
-        filename: `inflearn-subtitles/${it.title}.md`,
-      });
+      chrome.runtime.sendMessage({ action: "download", vid: it.vid });
 
     const cp = document.createElement("button");
     cp.className = "cp";
