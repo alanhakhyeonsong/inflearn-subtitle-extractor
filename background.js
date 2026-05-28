@@ -27,13 +27,29 @@ function sanitize(name) {
       .replace(/[\\/:*?"<>|]/g, "_")
       .replace(/\s+/g, " ")
       .trim()
-      .slice(0, 80) || "inflearn-subtitle"
+      .slice(0, 120) || "inflearn-subtitle"
   );
 }
 
 function videoId(url) {
   const m = /\/videos\/([0-9a-f-]+)\//.exec(url || "");
   return m ? m[1] : "unknown";
+}
+
+// 탭 URL 의 unitId 로 units API 를 호출해 강의 단위 제목을 얻는다(인증 불필요).
+async function fetchUnitTitle(unitId) {
+  if (!unitId) return "";
+  try {
+    const res = await fetch(
+      `https://ucc-api.inflearn.com/client/api/v2/units/${unitId}?lang=ko`
+    );
+    if (!res.ok) return "";
+    const j = await res.json();
+    const t = j && j.data && j.data.title;
+    return t ? String(t).trim() : "";
+  } catch (e) {
+    return "";
+  }
 }
 
 function toMarkdown(title, url, segs) {
@@ -88,12 +104,19 @@ async function capture(url, tabId) {
       return;
     }
     let title = "";
+    let unitTitle = "";
     try {
       const tab = await chrome.tabs.get(tabId);
       title = (tab && tab.title) || "";
+      if (tab && tab.url) {
+        const unitId = new URL(tab.url).searchParams.get("unitId");
+        unitTitle = await fetchUnitTitle(unitId);
+      }
     } catch (e) {}
 
-    const rec = toMarkdown(title, url, segs);
+    // {강의명 _ 학습 페이지} _ {강의 단위 제목}
+    const composed = unitTitle ? `${title} _ ${unitTitle}` : title;
+    const rec = toMarkdown(composed, url, segs);
     const { items = [] } = await chrome.storage.local.get({ items: [] });
     const idx = items.findIndex((it) => it.vid === rec.vid);
     const full = { ...rec, at: Date.now() };

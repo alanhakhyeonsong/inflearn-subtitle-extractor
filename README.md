@@ -42,7 +42,7 @@ background.js   ← chrome.downloads 로 .md 저장
 
 ### 사용 예시
 
-강의 페이지에서 스크립트 패널을 열면 자막이 자동 캡처되고, 확장 팝업에서 강의명·세그먼트 수와 함께 **MD 다운로드** / **복사** 버튼이 나타납니다.
+강의 페이지에서 스크립트 패널을 열면 자막이 자동 캡처되고, 확장 팝업에서 `강의명 _ 학습 페이지 _ 강의 단위 제목` 형식의 제목과 세그먼트 수, **MD 다운로드** / **복사** 버튼이 나타납니다.
 
 ![캡처된 자막 팝업 예시](docs/usage-popup.png)
 
@@ -68,11 +68,13 @@ ln -s ~/Downloads/inflearn-subtitles ~/tools/inflearn-subtitle-extractor/outputs
 
 ## 생성되는 Markdown 예시
 
+제목은 `{강의명} _ 학습 페이지 _ {강의 단위 제목}` 형식입니다. 강의 단위 제목은 캡처 시점에 탭 URL 의 `unitId` 로 인플런 units API(`ucc-api.inflearn.com/.../units/{id}`, 인증 불필요)를 조회해 가져옵니다.
+
 ```markdown
-# 통합 테스트 가속화 (tmpfs / Docker)
+# JPA (ORM) 개발자를 위한 고성능 SQL (High-Performance SQL) _ 학습 페이지 _ JOIN 타입(1)
 
 - 캡처 일시: 2026-05-29T...
-- 영상 ID: 541cdded-7462-46f6-8680-5d19274b8757
+- 영상 ID: d4e57318-07d5-4140-ab68-fd6437df3cef
 - 세그먼트 수: 42
 
 > 개인 학습용 자막 추출. 외부 재배포 금지.
