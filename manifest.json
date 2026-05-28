@@ -1,0 +1,29 @@
+{
+  "manifest_version": 3,
+  "name": "Inflearn 자막 → Markdown",
+  "version": "1.0.0",
+  "description": "인프런 강의 스크립트(자막) 요청을 가로채 학습용 Markdown으로 저장합니다.",
+  "minimum_chrome_version": "111",
+  "permissions": ["downloads", "storage", "clipboardWrite"],
+  "host_permissions": ["*://*.inflearn.com/*"],
+  "background": { "service_worker": "background.js" },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Inflearn 자막 추출"
+  },
+  "content_scripts": [
+    {
+      "matches": ["*://*.inflearn.com/*"],
+      "js": ["inject.js"],
+      "run_at": "document_start",
+      "all_frames": true,
+      "world": "MAIN"
+    },
+    {
+      "matches": ["*://*.inflearn.com/*"],
+      "js": ["content.js"],
+      "run_at": "document_start",
+      "all_frames": true
+    }
+  ]
+}
